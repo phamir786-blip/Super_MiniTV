@@ -258,12 +258,12 @@ static void minitvTick() {
   }
 }
 static String minitvStatusJson() {
-  String s="{"running":"+String(minitvRunning?"true":"false");
-  s+=","channel":"+String(minitvChannel);
-  s+=","channels":"+String(minitvChannelCount);
-  s+=","random":"+String(minitvRandomMode?"true":"false");
-  s+=","file":""+minitvCurrent+""";
-  s+=","frames":"+String(minitvFrameCount)+"}";
+  String s="{\\"running\\":"+String(minitvRunning?"true":"false");
+  s+=",\\"channel\\":"+String(minitvChannel);
+  s+=",\\"channels\\":"+String(minitvChannelCount);
+  s+=",\\"random\\":"+String(minitvRandomMode?"true":"false");
+  s+=",\\"file\\":\\""+minitvCurrent+"\\"";
+  s+=",\\"frames\\":"+String(minitvFrameCount)+"}";
   return s;
 }
 static String minitvMediaList() {
