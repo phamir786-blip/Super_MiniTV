@@ -20,6 +20,8 @@
 #include <Update.h>
 #include <time.h>
 #include <math.h>
+#include "config.h"
+#include "minitv_player.h"
 
 // =========================
 // Proven hardware foundation
@@ -102,6 +104,7 @@ bool mdnsStarted = false;
 bool serverStarted = false;
 bool ntpOK = false;
 String lastHttp = "-";
+volatile bool mediaPlaying = false;
 
 // =========================
 // Low-level ST7789
@@ -226,6 +229,26 @@ void fillRect(int16_t x,int16_t y,int16_t w,int16_t h,uint16_t c) {
   SPI.endTransaction();
 }
 
+// =========================
+/* Real MiniTV video-frame sink.
+   The GMT130 has no CS pin, so video uses the same proven SPI Mode 3 path. */
+void minitvDisplayFrame(JPEGDRAW *draw) {
+  if (!mediaPlaying || !draw || !draw->pPixels) return;
+  int x = draw->x;
+  int y = draw->y;
+  int w = draw->iWidth;
+  int h = draw->iHeight;
+  if (x < 0 || y < 0 || x + w > W || y + h > H) return;
+
+  lcdSetWindow(x, y, x + w - 1, y + h - 1);
+  SPI.beginTransaction(lcdSettings);
+  digitalWrite(TFT_DC, HIGH);
+  SPI.transferBytes(reinterpret_cast<uint8_t *>(draw->pPixels), nullptr,
+                    static_cast<size_t>(w) * h * 2);
+  SPI.endTransaction();
+}
+
+// =========================
 // =========================
 // Compact clean bitmap font
 // =========================
@@ -723,6 +746,15 @@ small{color:#7f8ca5}.ok{color:var(--g)}.warn{color:var(--y)}a{color:var(--a)}
 <div class="card"><b>QUICK CONTROL</b>
 <form method="POST" action="/page"><button name="p" value="0">HOME</button><button name="p" value="1">RETRO</button><button name="p" value="2">WEATHER</button><button name="p" value="3">SYSTEM</button><button name="p" value="4">CUSTOM</button></form>
 </div>
+<div class="card"><b>MEDIA PLAYER</b>
+<p><small id="mediaState">Loading player state...</small></p>
+<form method="GET" action="/media">
+<button name="cmd" value="start" class="primary">PLAY</button>
+<button name="cmd" value="stop">STOP</button>
+<button name="cmd" value="next">NEXT</button>
+</form>
+<p><small>Media tree: /Videos/1/, /Videos/2/, /Videos/random/</small></p>
+</div>
 <div class="card"><b>FIRMWARE</b>
 <p><small>Web OTA is available on the same LAN. Upload the PlatformIO firmware.bin directly.</small></p>
 <input id="fw" type="file" accept=".bin" required>
@@ -887,6 +919,13 @@ void handleHttp() {
   } else if(path=="/page"&&method=="POST"){
     String v=formValue(body,"p");if(v.length())page=(Page)constrain(v.toInt(),0,(int)PAGE_COUNT-1);
     lastRotate=millis();redirect(c);
+  } else if(path=="/media"&&method=="GET"){
+    int q=path.indexOf("?cmd=");
+    String cmd=(q>=0)?path.substring(q+5):"";
+    if(cmd=="start"){ minitvStartPlayback(); }
+    else if(cmd=="stop"){ minitvStopPlayback(); }
+    else if(cmd=="next"){ minitvNextChannel(1); minitvStartPlayback(); }
+    httpReply(c,minitvStatusJson(),200,"application/json");
   } else if(path=="/ota"&&method=="GET"){
     httpReply(c,"Use the MiniTV web console to upload firmware.bin.");
   } else if(path=="/factory"&&method=="POST"){
@@ -913,6 +952,7 @@ void setup() {
   loadSettings();
   lcdInit();
   fillScreen(C_BLACK);
+  minitvBegin();
 
   // Proven STA-only network strategy
   WiFi.mode(WIFI_STA);
@@ -951,13 +991,15 @@ void loop() {
 
   handleHttp();
 
-  if(autoRotate && millis()-lastRotate>rotateSeconds*1000UL){
-    page=(Page)(((int)page+1)%PAGE_COUNT);
-    lastRotate=millis();
-  }
+  if(!mediaPlaying){
+    if(autoRotate && millis()-lastRotate>rotateSeconds*1000UL){
+      page=(Page)(((int)page+1)%PAGE_COUNT);
+      lastRotate=millis();
+    }
 
-  if(millis()-lastFrame>1000/12){
-    lastFrame=millis();
-    drawPage();
+    if(millis()-lastFrame>1000/12){
+      lastFrame=millis();
+      drawPage();
+    }
   }
 }
