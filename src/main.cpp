@@ -893,6 +893,9 @@ void handleHttp() {
   String method=req.substring(0,req.indexOf(' '));
   int a=req.indexOf(' '),b=req.indexOf(' ',a+1);
   String path=(a>=0&&b>a)?req.substring(a+1,b):"/";
+  String route=path;
+  int queryPos=route.indexOf("?");
+  if(queryPos>=0) route=route.substring(0,queryPos);
   if(path=="/ota"&&method=="POST"){
     handleOta(c);
     c.stop();
@@ -919,7 +922,7 @@ void handleHttp() {
   } else if(path=="/page"&&method=="POST"){
     String v=formValue(body,"p");if(v.length())page=(Page)constrain(v.toInt(),0,(int)PAGE_COUNT-1);
     lastRotate=millis();redirect(c);
-  } else if(path=="/media"&&method=="GET"){
+  } else if(route=="/media"&&method=="GET"){
     int q=path.indexOf("?cmd=");
     String cmd=(q>=0)?path.substring(q+5):"";
     if(cmd=="start"){ minitvStartPlayback(); }
