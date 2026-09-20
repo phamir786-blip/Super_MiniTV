@@ -1,11 +1,13 @@
 name: Super MiniTV Build
 
 concurrency:
-  group: super-minitv-build
+  group: super-minitv-build-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
@@ -23,6 +25,14 @@ jobs:
         run: |
           test -f .pio/build/esp32-c3-devkitm-1/firmware.bin
           ls -lh .pio/build/esp32-c3-devkitm-1/firmware.bin
+      - name: Audit forbidden audio architecture
+        run: |
+          ! grep -RniE 'I2S|AACDecoder|MP3Decoder|esp32_audio_task|MINITV_AUDIO' src
+          ! grep -RniE 'MJPEG|mjpeg_decode' src
+      - name: Verify media engine
+        run: |
+          grep -Rni 'AnimatedGIF' platformio.ini src/minitv_player.h
+          grep -RniE '\\.gif|\\.jpg|\\.jpeg' src/minitv_player.h
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
