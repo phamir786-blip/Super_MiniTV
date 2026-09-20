@@ -1,5 +1,9 @@
 name: Super MiniTV Build
 
+concurrency:
+  group: super-minitv-build
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main ]
