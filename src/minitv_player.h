@@ -19,7 +19,7 @@ static File minitvFile;
 static String minitvCurrent = "";
 static String minitvPending = "";
 static bool minitvRunning = false;
-static bool minitvGifOpen = false;
+static bool minitvGifActive = false;
 static bool minitvJpegShown = false;
 static uint32_t minitvStaticUntil = 0;
 static int minitvChannel = 1;
@@ -40,7 +40,7 @@ static bool minitvIsJpeg(const String &n) {
   String s=n; s.toLowerCase(); return s.endsWith(".jpg") || s.endsWith(".jpeg");
 }
 static bool minitvSafePath(const String &p) {
-  return p.startsWith(MINITV_MEDIA_ROOT) && !p.startsWith(MINITV_MEDIA_ROOT+"//") &&
+  return p.startsWith(MINITV_MEDIA_ROOT) && !p.startsWith(String(MINITV_MEDIA_ROOT)+"//"") &&
          p.indexOf("..")<0;
 }
 static void minitvEnsureDir(const String &path) {
