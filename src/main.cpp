@@ -725,9 +725,22 @@ small{color:#7f8ca5}.ok{color:var(--g)}.warn{color:var(--y)}a{color:var(--a)}
 </div>
 <div class="card"><b>FIRMWARE</b>
 <p><small>Web OTA is available on the same LAN. Upload the PlatformIO firmware.bin directly.</small></p>
-<form method="POST" action="/ota" enctype="application/octet-stream">
-<input type="file" name="firmware" accept=".bin" required>
-<button class="primary">UPLOAD FIRMWARE</button></form>
+<input id="fw" type="file" accept=".bin" required>
+<button class="primary" onclick="ota();return false">UPLOAD FIRMWARE</button>
+<small id="otaStatus"></small>
+<script>
+async function ota(){
+ const f=document.getElementById('fw').files[0];
+ const st=document.getElementById('otaStatus');
+ if(!f){st.textContent='Select firmware.bin first';return;}
+ if(!f.name.endsWith('.bin')){st.textContent='Select a .bin firmware file';return;}
+ st.textContent='Uploading '+f.size+' bytes...';
+ try{
+   const r=await fetch('/ota',{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:f});
+   st.textContent=await r.text();
+ }catch(e){st.textContent='OTA connection failed';}
+}
+</script>
 </div>
 <div class="card"><b>SYSTEM</b><p>Uptime: )HTML"+String((millis()-bootMillis)/1000)+R"HTML( s<br>Heap: )HTML"+String(ESP.getFreeHeap())+R"HTML( bytes<br>RSSI: )HTML"+String(WiFi.RSSI())+R"HTML( dBm<br>CPU: )HTML"+String(getCpuFrequencyMhz())+R"HTML( MHz</p>
 <form method="POST" action="/factory" onsubmit="return confirm('Reset saved MiniTV settings?')"><button>FACTORY RESET SETTINGS</button></form></div>
@@ -810,7 +823,7 @@ void handleOta(WiFiClient& c) {
     return;
   }
 
-  httpReply(c,"OTA OK - rebooting","200","text/plain");
+  httpReply(c,"OTA OK - rebooting",200,"text/plain");
   delay(500);
   ESP.restart();
 }
