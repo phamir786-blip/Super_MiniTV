@@ -761,7 +761,7 @@ small{color:#7f8ca5}.ok{color:var(--g)}.warn{color:var(--y)}a{color:var(--a)}
 <button name="cmd" value="stop">STOP</button>
 <button name="cmd" value="next">NEXT</button>
 </form>
-<p><small>Media tree: /Videos/1/, /Videos/2/, /Videos/random/</small></p>
+<p><small>Media: MJPEG/GIF/image files in LittleFS /Videos/</small></p>
 </div>
 <div class="card"><b>FIRMWARE</b>
 <p><small>Web OTA is available on the same LAN. Upload the PlatformIO firmware.bin directly.</small></p>
