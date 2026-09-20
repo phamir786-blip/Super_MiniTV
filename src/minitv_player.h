@@ -86,10 +86,6 @@ static int minitvScanChannels() {
   return minitvChannelCount;
 }
 
-static void minitvGifOpenFile(const char *fname, int32_t *size) {
-  // Placeholder declaration is replaced by the callback below.
-}
-
 static void *minitvGifOpen(const char *fname, int32_t *size) {
   minitvFile=LittleFS.open(fname,FILE_READ);
   if(!minitvFile) return nullptr;
@@ -183,7 +179,7 @@ static String minitvPickNext() {
 static bool minitvOpenCurrent(const String &path) {
   if(!minitvIsImage(path)) return false;
   minitvCurrent=path;
-  minitvGifOpen=false; minitvJpegShown=false;
+  minitvGifActive=false; minitvJpegShown=false;
   minitvImageX=0; minitvImageY=0;
 
   if(minitvIsGif(path)){
@@ -194,7 +190,7 @@ static bool minitvOpenCurrent(const String &path) {
     int w=minitvGif.getCanvasWidth(), h=minitvGif.getCanvasHeight();
     minitvImageX=(MINITV_WIDTH-w)/2; if(minitvImageX<0)minitvImageX=0;
     minitvImageY=(MINITV_HEIGHT-h)/2; if(minitvImageY<0)minitvImageY=0;
-    minitvGifOpen=true;
+    minitvGifActive=true;
     return true;
   }
 
@@ -217,7 +213,7 @@ static bool minitvOpenCurrent(const String &path) {
 }
 
 static void minitvStopPlayback() {
-  if(minitvGifOpen){minitvGif.close();minitvGifOpen=false;}
+  if(minitvGifActive){minitvGif.close();minitvGifActive=false;}
   if(minitvFile) minitvFile.close();
   minitvRunning=false; minitvCurrent="";
 }
@@ -240,12 +236,12 @@ static void minitvNextChannel(int direction) {
 }
 static void minitvTick() {
   if(!minitvRunning) return;
-  if(minitvGifOpen){
+  if(minitvGifActive){
     int delayMs=0;
     int more=minitvGif.playFrame(true,&delayMs);
     ++minitvFrameCount;
     if(!more){
-      minitvGif.close(); minitvGifOpen=false;
+      minitvGif.close(); minitvGifActive=false;
       minitvFrameCount++;
       minitvCurrent="";
     }
