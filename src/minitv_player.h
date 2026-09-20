@@ -222,7 +222,13 @@ static void minitv_playback_task(void *) {
 
     minitv_playOne(video, audio);
 
-    if (minitv_stop_requested) break;
+    if (minitv_stop_requested) {
+      if (minitv_autoplay) {
+        minitv_stop_requested = false;
+      } else {
+        break;
+      }
+    }
 
     if (!minitv_has_random && minitv_channel_count > 0) {
       ++minitv_channel;
