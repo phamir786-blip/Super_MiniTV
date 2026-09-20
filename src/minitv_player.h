@@ -7,7 +7,7 @@
 #include "mjpeg_decode_draw_task.h"
 #include "esp32_audio_task.h"
 
-extern void minitvDisplayFrame(JPEGDRAW *draw);
+extern int minitvDisplayFrame(JPEGDRAW *draw);
 extern volatile bool mediaPlaying;
 
 static volatile bool minitv_stop_requested = false;
