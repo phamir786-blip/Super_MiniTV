@@ -111,7 +111,8 @@ void reply(WiFiClient&c,const String&b,int code=200,const char*t="text/html"){co
 void redirect(WiFiClient&c){c.print("HTTP/1.1 303 See Other\r\nLocation: /\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");}
 void headers(WiFiClient&c){String line;while(c.connected()){line=c.readStringUntil('\n');if(line=="\r"||line.length()==0)break;String l=line;l.toLowerCase();if(l.startsWith("content-length:"))contentLength=(size_t)l.substring(15).toInt();}}
 String request(WiFiClient&c){String r=c.readStringUntil('\n');r.trim();lastRequest=r;contentLength=0;headers(c);return r;}
-String readBody(WiFiClient&c){String b;size_t left=contentLength;uint32_t until=millis()+5000;while(left&&c.connected()&&millis()<until){while(c.available()&&left){char ch=(char)c.read();b+=ch;--left;}if(left)delay(1);}return b;}\nvoid handleUpload(WiFiClient&c,const String&path){
+String readBody(WiFiClient&c){String b;size_t left=contentLength;uint32_t until=millis()+5000;while(left&&c.connected()&&millis()<until){while(c.available()&&left){char ch=(char)c.read();b+=ch;--left;}if(left)delay(1);}return b;}
+void handleUpload(WiFiClient&c,const String&path){
   if(!minitvSafePath(path)||!minitvIsImage(path)||contentLength==0||contentLength>MINITV_MAX_UPLOAD){reply(c,"Invalid media path or size",400,"text/plain");return;}
   minitvEnsureDir(path);File f=LittleFS.open(path,FILE_WRITE);if(!f){reply(c,"Open failed",500,"text/plain");return;}
   uint8_t buf[1024];size_t left=contentLength;uint32_t until=millis()+30000;
@@ -142,10 +143,10 @@ void http(){
 void weather(){
   if(WiFi.status()!=WL_CONNECTED)return;WiFiClient cl;HTTPClient h;
   String g="http://geocoding-api.open-meteo.com/v1/search?name="+weatherPlace+"&count=1&format=json";if(!h.begin(cl,g))return;int code=h.GET();if(code!=200){h.end();return;}String s=h.getString();h.end();
-  int a=s.indexOf(""latitude":"),b=s.indexOf(""longitude":");if(a<0||b<0)return;float lat=s.substring(a+11).toFloat(),lon=s.substring(b+12).toFloat();
+  int a=s.indexOf("\"latitude\":"),b=s.indexOf("\"longitude\":");if(a<0||b<0)return;float lat=s.substring(a+11).toFloat(),lon=s.substring(b+12).toFloat();
   String u="http://api.open-meteo.com/v1/forecast?latitude="+String(lat,5)+"&longitude="+String(lon,5)+"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto";
   if(!h.begin(cl,u))return;code=h.GET();if(code!=200){h.end();return;}s=h.getString();h.end();
-  a=s.indexOf(""temperature_2m":");if(a>=0)weatherTemp=s.substring(a+17).toFloat();a=s.indexOf(""relative_humidity_2m":");if(a>=0)weatherHumidity=s.substring(a+23).toInt();a=s.indexOf(""weather_code":");if(a>=0)weatherCode=s.substring(a+15).toInt();a=s.indexOf(""wind_speed_10m":");if(a>=0)weatherWind=s.substring(a+17).toFloat();weatherOK=!isnan(weatherTemp);
+  a=s.indexOf("\"temperature_2m\":");if(a>=0)weatherTemp=s.substring(a+17).toFloat();a=s.indexOf("\"relative_humidity_2m\":");if(a>=0)weatherHumidity=s.substring(a+23).toInt();a=s.indexOf("\"weather_code\":");if(a>=0)weatherCode=s.substring(a+15).toInt();a=s.indexOf("\"wind_speed_10m\":");if(a>=0)weatherWind=s.substring(a+17).toFloat();weatherOK=!isnan(weatherTemp);
 }
 void network(){
   if(WiFi.status()!=WL_CONNECTED){WiFi.mode(WIFI_STA);WiFi.setHostname(HOSTNAME);WiFi.setSleep(false);WiFi.begin(WIFI_SSID,WIFI_PASSWORD);return;}
