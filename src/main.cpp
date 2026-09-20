@@ -232,13 +232,13 @@ void fillRect(int16_t x,int16_t y,int16_t w,int16_t h,uint16_t c) {
 // =========================
 /* Real MiniTV video-frame sink.
    The GMT130 has no CS pin, so video uses the same proven SPI Mode 3 path. */
-void minitvDisplayFrame(JPEGDRAW *draw) {
-  if (!mediaPlaying || !draw || !draw->pPixels) return;
+int minitvDisplayFrame(JPEGDRAW *draw) {
+  if (!mediaPlaying || !draw || !draw->pPixels) return 1;
   int x = draw->x;
   int y = draw->y;
   int w = draw->iWidth;
   int h = draw->iHeight;
-  if (x < 0 || y < 0 || x + w > W || y + h > H) return;
+  if (x < 0 || y < 0 || x + w > W || y + h > H) return 1;
 
   lcdSetWindow(x, y, x + w - 1, y + h - 1);
   SPI.beginTransaction(lcdSettings);
