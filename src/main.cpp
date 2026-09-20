@@ -29,7 +29,7 @@
 #define TFT_DC    2
 #define TFT_RST   3
 
-static SPISettings lcdSettings(1000000, MSBFIRST, SPI_MODE3);
+static SPISettings lcdSettings(4000000, MSBFIRST, SPI_MODE3);
 
 // =========================
 // Proven network foundation
@@ -316,13 +316,32 @@ String dayName(int d){static const char* a[]={"SUN","MON","TUE","WED","THU","FRI
 String monthName(int m){static const char* a[]={"JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"};return a[m%12];}
 
 void topBar(const String& label,uint16_t accent) {
-  fillRect(0,0,W,28,C_DARK);
-  fillRect(0,27,W,1,accent);
-  text5(label,8,8,2,C_WHITE);
+  fillRect(0,0,W,30,0x0820);
+  fillRect(0,29,W,1,accent);
+  text5(label,10,8,2,C_WHITE);
   int bars=WiFi.status()==WL_CONNECTED?map(WiFi.RSSI(),-90,-35,1,5):0;
   bars=constrain(bars,0,5);
-  for(int i=0;i<5;i++) fillRect(194+i*7,22-(i+1)*3,5,(i+1)*3,i<bars?C_GREEN:C_GRAY);
-  fillRect(231,8,6,12,WiFi.status()==WL_CONNECTED?C_GREEN:C_RED);
+  for(int i=0;i<5;i++) fillRect(193+i*7,22-(i+1)*3,5,(i+1)*3,i<bars?C_GREEN:0x294A);
+  fillRect(229,9,7,12,WiFi.status()==WL_CONNECTED?C_GREEN:C_RED);
+}
+
+void footer(const String& s) {
+  fillRect(0,222,W,18,0x0610);
+  fillRect(0,222,W,1,C_DARK);
+  text5(s,8,227,1,0xBDF7);
+  String p=String((int)page+1)+"/"+String((int)PAGE_COUNT);
+  text5(p,216,227,1,C_CYAN);
+}
+
+void crt() {
+  if(!crtEffect)return;
+  for(int y=31;y<222;y+=4) fillRect(0,y,W,1,0x0204);
+  uint32_t seed=millis()/80;
+  for(int i=0;i<10;i++){
+    int x=(seed*17+i*31)%W;
+    int y=32+(seed+i*17)%186;
+    fillRect(x,y,1,1,0x4A69);
+  }
 }
 
 void footer(const String& s) {
@@ -346,18 +365,49 @@ void crt() {
 // Pages
 // =========================
 void pageHome() {
-  fillScreen(C_BLACK);
-  topBar("HOME",C_CYAN);
-  centerText(titleText.substring(0,20),34,2,C_WHITE);
-  drawClock();
+  fillScreen(0x02050A);
+  topBar("MINITV ULTRA",C_CYAN);
+
+  // Cinematic background grid / horizon.
+  for(int y=42;y<222;y+=18) fillRect(0,y,W,1,0x0820);
+  for(int x=20;x<W;x+=40) fillRect(x,42,1,180,0x0615);
+
+  // Status pill.
+  fillRect(10,38,72,18,0x102A); rect(10,38,72,18,C_CYAN);
+  text5(WiFi.status()==WL_CONNECTED?"ONLINE":"OFFLINE",18,44,1,
+        WiFi.status()==WL_CONNECTED?C_GREEN:C_RED);
+
+  // Large clock, deliberately spaced for the 240x240 panel.
   struct tm ti;
-  if(getLocalTime(&ti,20)){
-    String d=dayName(ti.tm_wday)+"  "+monthName(ti.tm_mon)+" "+String(ti.tm_mday)+"  "+String(ti.tm_year+1900);
-    centerText(d,178,2,C_YELLOW);
+  if(getLocalTime(&ti,20)) {
+    String hh=two(ti.tm_hour), mm=two(ti.tm_min);
+    centerText(hh+":"+mm,64,4,C_WHITE);
+    if(showSeconds) {
+      String ss=two(ti.tm_sec);
+      centerText(ss,112,2,C_ORANGE);
+    }
+    String d=dayName(ti.tm_wday)+"  "+monthName(ti.tm_mon)+" "+String(ti.tm_mday);
+    centerText(d,139,2,C_YELLOW);
+    centerText(String(ti.tm_year+1900),158,1,0x7BEF);
+  } else {
+    centerText("--:--",78,4,C_GRAY);
+    centerText("WAITING FOR NTP",142,1,C_DIM);
   }
-  fillRect(18,201,204,1,C_GRAY);
-  text5(weatherOK?("WX "+String(weatherTemp,0)+"C  "+weatherPlace.substring(0,13)):"WX --  WEATHER OFFLINE",22,207,1,C_DIM);
-  crt(); footer("CHANNEL 01  •  LIVE");
+
+  // Weather card.
+  fillRect(12,181,216,34,0x0B1724);
+  rect(12,181,216,34,0x21435A);
+  if(weatherOK) {
+    text5("WEATHER",20,189,1,C_CYAN);
+    text5(String(weatherTemp,0)+"C",80,187,2,C_WHITE);
+    text5(weatherCondition(),134,190,1,C_YELLOW);
+  } else {
+    text5("WEATHER",20,189,1,C_CYAN);
+    text5("WAITING...",80,190,1,C_DIM);
+  }
+
+  crt();
+  footer("01  HOME  •  LIVE");
 }
 
 void drawTV(int ox,int oy,int scale) {
@@ -380,13 +430,32 @@ void drawTV(int ox,int oy,int scale) {
 }
 
 void pageRetro() {
-  fillScreen(0x0841);
-  topBar("RETRO BROADCAST",C_ORANGE);
-  drawTV(40,51,1);
-  centerText("CHANNEL 07",190,2,C_YELLOW);
-  text5("SIGNAL",12,208,1,C_DIM);
-  for(int i=0;i<7;i++) fillRect(56+i*20,206,12,4,(i<((millis()/300)%8))?C_GREEN:C_GRAY);
-  crt(); footer("ANALOG MODE  •  1987");
+  fillScreen(0x020308);
+  topBar("RETRO TV",C_ORANGE);
+
+  // Bezel.
+  fillRect(17,40,206,137,0x1A1C24);
+  rect(17,40,206,137,0xD67A16);
+  rect(21,44,198,129,0x6B3C12);
+  fillRect(29,52,182,101,0x001018);
+  rect(29,52,182,101,C_ORANGE);
+
+  // Animated broadcast raster.
+  int phase=(millis()/90)%24;
+  for(int y=58;y<148;y+=5) fillRect(34,y,172,1,(y+phase)%15==0?C_CYAN:0x08304A);
+  fillRect(43+phase,76,46,30,C_MAGENTA);
+  fillRect(97-phase/2,84,71,18,C_BLUE);
+  text5("ON AIR",89,112,2,C_WHITE);
+
+  // Channel badge + signal.
+  fillRect(28,160,72,25,0x101C26); rect(28,160,72,25,C_YELLOW);
+  text5("CH 07",38,168,2,C_YELLOW);
+  text5("SIGNAL",112,162,1,C_DIM);
+  for(int i=0;i<6;i++)
+    fillRect(112+i*14,174,9,6,(i<((millis()/250)%7))?C_GREEN:C_GRAY);
+
+  crt();
+  footer("02  RETRO  •  BROADCAST");
 }
 
 void weatherIcon(int x,int y) {
@@ -414,53 +483,85 @@ String weatherCondition() {
 }
 
 void pageWeather() {
-  fillScreen(C_BLACK);topBar("WEATHER",C_YELLOW);
-  weatherIcon(20,52);
-  if(weatherOK){
-    String t=String(weatherTemp,1)+" C";
-    centerText(t,55,3,C_WHITE);
-    centerText(weatherCondition(),103,2,C_CYAN);
-    text5("FEELS "+String(weatherFeels,0)+" C",18,135,1,C_DIM);
-    text5("HUM "+String(weatherHumidity)+"%",18,150,1,C_DIM);
-    text5("WIND "+String(weatherWind,1)+" KM/H",18,165,1,C_DIM);
-    text5(weatherPlace.substring(0,28),18,187,1,C_YELLOW);
-    text5("UPDATED "+weatherUpdated,18,202,1,C_GRAY);
+  fillScreen(0x03070B);
+  topBar("WEATHER DESK",C_YELLOW);
+
+  fillRect(10,40,220,72,0x0B1620);
+  rect(10,40,220,72,0x254052);
+  weatherIcon(18,47);
+
+  if(weatherOK) {
+    text5(String(weatherTemp,0)+"C",92,51,4,C_WHITE);
+    text5(weatherCondition(),94,92,1,C_CYAN);
   } else {
-    centerText("NO WEATHER DATA",125,2,C_RED);
-    centerText("CHECK NETWORK",148,2,C_DIM);
+    text5("--C",100,55,4,C_GRAY);
+    text5("NO DATA",101,94,1,C_RED);
   }
-  footer("OPEN-METEO  •  AUTO");
+
+  fillRect(10,120,105,42,0x0A111A); rect(10,120,105,42,0x203448);
+  text5("HUMIDITY",18,128,1,C_DIM);
+  text5(weatherOK?String(weatherHumidity)+"%":"--",18,143,2,C_WHITE);
+
+  fillRect(120,120,110,42,0x0A111A); rect(120,120,110,42,0x203448);
+  text5("WIND",128,128,1,C_DIM);
+  text5(weatherOK?String(weatherWind,0)+" KM/H":"--",128,143,2,C_WHITE);
+
+  fillRect(10,171,220,39,0x0B1620); rect(10,171,220,39,0x254052);
+  text5("LOCATION",18,178,1,C_DIM);
+  text5(weatherPlace.substring(0,25),18,192,1,C_YELLOW);
+  text5(weatherOK?("UPDATED "+weatherUpdated):"NETWORK REQUIRED",132,192,1,C_CYAN);
+
+  footer("03  WEATHER  •  OPEN-METEO");
 }
 
 void pageSystem() {
-  fillScreen(C_BLACK);topBar("SYSTEM MONITOR",C_GREEN);
-  int y=45;
-  String rssi=WiFi.status()==WL_CONNECTED?String(WiFi.RSSI())+" dBm":"OFFLINE";
-  String ip=WiFi.status()==WL_CONNECTED?WiFi.localIP().toString():"0.0.0.0";
+  fillScreen(0x030508);
+  topBar("SYSTEM",C_GREEN);
+
+  int y=41;
   String rows[]={
-    "WIFI     "+rssi,
-    "IP       "+ip,
-    "MDNS     "+String(mdnsStarted?"minitv.local":"OFF"),
-    "NTP      "+String(ntpOK?"SYNCED":"WAITING"),
-    "UPTIME   "+String((millis()-bootMillis)/1000)+" s",
-    "HEAP     "+String(ESP.getFreeHeap()/1024)+" KB",
-    "CPU      "+String(getCpuFrequencyMhz())+" MHz",
-    "PAGE     "+String((int)page+1)+" / "+String((int)PAGE_COUNT)
+    "WIFI   "+String(WiFi.status()==WL_CONNECTED?"CONNECTED":"OFFLINE"),
+    "RSSI   "+String(WiFi.status()==WL_CONNECTED?WiFi.RSSI():0)+" dBm",
+    "IP     "+(WiFi.status()==WL_CONNECTED?WiFi.localIP().toString():"0.0.0.0"),
+    "MDNS   minitv.local",
+    "NTP    "+String(ntpOK?"SYNCED":"WAITING"),
+    "UP     "+String((millis()-bootMillis)/1000)+" s",
+    "HEAP   "+String(ESP.getFreeHeap()/1024)+" KB",
+    "CPU    "+String(getCpuFrequencyMhz())+" MHz"
   };
-  for(int i=0;i<8;i++){fillRect(12,y-3,216,20,(i%2)?0x0841:0x1082);text5(rows[i],18,y+2,1,i==0?C_GREEN:C_WHITE);y+=21;}
-  footer("DIAGNOSTICS  •  LIVE");
+  for(int i=0;i<8;i++){
+    fillRect(10,y,220,20,(i&1)?0x081018:0x0B151E);
+    text5(rows[i],16,y+6,1,(i==0)?(WiFi.status()==WL_CONNECTED?C_GREEN:C_RED):C_WHITE);
+    y+=21;
+  }
+  footer("04  SYSTEM  •  DIAGNOSTICS");
 }
 
 void pageCustom() {
-  fillScreen(C_BLACK);topBar("CUSTOM SCREEN",C_MAGENTA);
-  int shift=(millis()/35)%260-20;
-  fillRect(0,52,W,94,0x1008);
-  rect(6,58,W-12,82,C_MAGENTA);
-  text5("CUSTOM MESSAGE",22,70,1,C_DIM);
-  text5(messageText.substring(0,30),shift,101,2,C_WHITE);
-  centerText(titleText.substring(0,22),165,2,C_CYAN);
-  centerText("EDIT ME FROM WEB",195,1,C_YELLOW);
-  crt(); footer("USER SCREEN  •  WEB CONTROL");
+  fillScreen(0x03020A);
+  topBar("CUSTOM CHANNEL",C_MAGENTA);
+
+  int pulse=(millis()/20)%260-10;
+  fillRect(10,42,220,118,0x10091A);
+  rect(10,42,220,118,C_MAGENTA);
+  fillRect(16,48,208,106,0x05030B);
+  text5("CHANNEL 99",24,57,1,C_DIM);
+
+  // Moving neon sweep behind the message.
+  fillRect(pulse,76,54,54,0x3A0E55);
+  fillRect((pulse+90)%250-10,89,42,30,0x143A54);
+
+  text5(messageText.substring(0,30),20,91,2,C_WHITE);
+  centerText(titleText.substring(0,22),137,1,C_CYAN);
+
+  fillRect(10,169,220,39,0x0B1019);
+  rect(10,169,220,39,0x27334A);
+  text5("EDIT LIVE FROM",22,178,1,C_DIM);
+  text5("MINITV.LOCAL",118,178,1,C_YELLOW);
+  text5("WEB CONSOLE",78,194,1,C_CYAN);
+
+  crt();
+  footer("05  CUSTOM  •  USER CHANNEL");
 }
 
 void drawPage() {
