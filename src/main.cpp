@@ -344,22 +344,7 @@ void crt() {
   }
 }
 
-void footer(const String& s) {
-  fillRect(0,222,W,18,C_BLACK);
-  text5(s,7,227,1,C_DIM);
-  String p=String((int)page+1)+"/"+String((int)PAGE_COUNT);
-  text5(p,213,227,1,C_DIM);
-}
 
-void crt() {
-  if(!crtEffect)return;
-  for(int y=30;y<222;y+=4) fillRect(0,y,W,1,0x0000);
-  uint32_t seed=millis()/80;
-  for(int i=0;i<8;i++){
-    int x=(seed*17+i*31)%W;
-    fillRect(x,31+(seed+i*13)%188,1,1,0x39C7);
-  }
-}
 
 // =========================
 // Pages
