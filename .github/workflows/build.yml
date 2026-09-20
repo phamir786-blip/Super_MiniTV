@@ -11,25 +11,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Build ESP32-C3 firmware
-        uses: esphome/esp-idf-action@main
-        with:
-          framework: arduino
-          platform: espressif32
-          board: esp32-c3-devkitm-1
-
       - name: Install PlatformIO
         run: pip install platformio
-
-      - name: Compile
+      - name: Compile ESP32-C3
         run: pio run
-
       - name: Verify firmware
         run: |
           test -f .pio/build/esp32-c3-devkitm-1/firmware.bin
           ls -lh .pio/build/esp32-c3-devkitm-1/firmware.bin
-
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
