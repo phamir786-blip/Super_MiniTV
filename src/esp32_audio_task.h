@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "esp_heap_caps.h"
 #include "config.h"
 
 #if MINITV_AUDIO_ENABLED
@@ -166,5 +167,4 @@ static bool minitv_start_mp3(Stream *in) {
 static bool minitv_audio_begin() { return true; }
 static void minitv_audio_end() {}
 static void minitv_audio_silence() {}
-static void minitv_set_audio_mute(bool) {}
 #endif
