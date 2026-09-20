@@ -32,7 +32,7 @@ jobs:
       - name: Verify media engine
         run: |
           grep -Rni 'AnimatedGIF' platformio.ini src/minitv_player.h
-          grep -RniE '\\.gif|\\.jpg|\\.jpeg' src/minitv_player.h
+          grep -RniE '\.gif|\.jpg|\.jpeg' src/minitv_player.h
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
