@@ -264,7 +264,7 @@ static bool minitvNextChannel(int direction) {
   if (minitv_channel < 1) minitv_channel = minitv_channel_count;
   if (minitv_channel > minitv_channel_count) minitv_channel = 1;
   minitv_stop_requested = true;
-  minitv_autoplay = false;
+  minitv_autoplay = true;
   return true;
 }
 
