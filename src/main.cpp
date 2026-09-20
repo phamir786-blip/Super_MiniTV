@@ -29,7 +29,7 @@
 #define TFT_DC    2
 #define TFT_RST   3
 
-static SPISettings lcdSettings(4000000, MSBFIRST, SPI_MODE3);
+static SPISettings lcdSettings(1000000, MSBFIRST, SPI_MODE3);
 
 // =========================
 // Proven network foundation
@@ -90,6 +90,7 @@ int weatherHumidity = -1;
 float weatherWind = NAN;
 String weatherUpdated = "--";
 bool weatherOK = false;
+size_t requestContentLength = 0;
 
 unsigned long bootMillis = 0;
 unsigned long lastFrame = 0;
@@ -349,6 +350,8 @@ void crt() {
 // =========================
 // Pages
 // =========================
+String weatherCondition();
+
 void pageHome() {
   fillScreen(0x02050A);
   topBar("MINITV ULTRA",C_CYAN);
@@ -720,6 +723,12 @@ small{color:#7f8ca5}.ok{color:var(--g)}.warn{color:var(--y)}a{color:var(--a)}
 <div class="card"><b>QUICK CONTROL</b>
 <form method="POST" action="/page"><button name="p" value="0">HOME</button><button name="p" value="1">RETRO</button><button name="p" value="2">WEATHER</button><button name="p" value="3">SYSTEM</button><button name="p" value="4">CUSTOM</button></form>
 </div>
+<div class="card"><b>FIRMWARE</b>
+<p><small>Web OTA is available on the same LAN. Upload the PlatformIO firmware.bin directly.</small></p>
+<form method="POST" action="/ota" enctype="application/octet-stream">
+<input type="file" name="firmware" accept=".bin" required>
+<button class="primary">UPLOAD FIRMWARE</button></form>
+</div>
 <div class="card"><b>SYSTEM</b><p>Uptime: )HTML"+String((millis()-bootMillis)/1000)+R"HTML( s<br>Heap: )HTML"+String(ESP.getFreeHeap())+R"HTML( bytes<br>RSSI: )HTML"+String(WiFi.RSSI())+R"HTML( dBm<br>CPU: )HTML"+String(getCpuFrequencyMhz())+R"HTML( MHz</p>
 <form method="POST" action="/factory" onsubmit="return confirm('Reset saved MiniTV settings?')"><button>FACTORY RESET SETTINGS</button></form></div>
 <div class="card"><small>Firmware: Super MiniTV Ultra • )HTML"+String(__DATE__)+" "+String(__TIME__)+R"HTML(</small></div>
@@ -729,26 +738,81 @@ small{color:#7f8ca5}.ok{color:var(--g)}.warn{color:var(--y)}a{color:var(--a)}
 
 String readRequest(WiFiClient& c) {
   String req=c.readStringUntil('\n');
-  req.trim();lastHttp=req;
+  req.trim();
+  lastHttp=req;
+  requestContentLength=0;
+
   while(c.connected()){
     String line=c.readStringUntil('\n');
     if(line=="\r"||line.length()==0)break;
+    String lower=line;
+    lower.toLowerCase();
+    if(lower.startsWith("content-length:")){
+      requestContentLength=(size_t)lower.substring(15).toInt();
+    }
   }
   return req;
 }
 
 String readBody(WiFiClient& c) {
-  // The UI sends small application/x-www-form-urlencoded bodies.
-  // The header parser above consumes only the header lines; readStringUntil waits
-  // for the client's body and is adequate for these small forms.
   String body;
-  unsigned long start=millis();
-  while(c.connected() && millis()-start<300){
-    while(c.available())body+=(char)c.read();
-    if(body.length())break;
-    delay(1);
+  body.reserve(requestContentLength);
+  unsigned long deadline=millis()+2000;
+  while(body.length()<requestContentLength && c.connected() && millis()<deadline){
+    while(c.available() && body.length()<requestContentLength){
+      body+=(char)c.read();
+    }
+    if(body.length()<requestContentLength) delay(1);
   }
   return body;
+}
+
+void handleOta(WiFiClient& c) {
+  if(requestContentLength==0 || requestContentLength > 1900000UL){
+    httpReply(c,"Invalid firmware size",400,"text/plain");
+    return;
+  }
+
+  if(!Update.begin(requestContentLength)){
+    httpReply(c,"OTA begin failed",500,"text/plain");
+    return;
+  }
+
+  uint8_t buffer[1024];
+  size_t received=0;
+  unsigned long deadline=millis()+30000;
+
+  while(received<requestContentLength && c.connected() && millis()<deadline){
+    int available=c.available();
+    if(available<=0){ delay(1); continue; }
+    size_t want=requestContentLength-received;
+    if(want>sizeof(buffer)) want=sizeof(buffer);
+    if((size_t)available<want) want=available;
+    int n=c.read(buffer,want);
+    if(n>0){
+      if(Update.write(buffer,n)!=(size_t)n){
+        Update.abort();
+        httpReply(c,"OTA write failed",500,"text/plain");
+        return;
+      }
+      received+=(size_t)n;
+    }
+  }
+
+  if(received!=requestContentLength){
+    Update.abort();
+    httpReply(c,"OTA upload incomplete",400,"text/plain");
+    return;
+  }
+
+  if(!Update.end(true)){
+    httpReply(c,"OTA validation failed",500,"text/plain");
+    return;
+  }
+
+  httpReply(c,"OTA OK - rebooting","200","text/plain");
+  delay(500);
+  ESP.restart();
 }
 
 String formValue(const String& body,const String& key) {
@@ -782,6 +846,12 @@ void handleHttp() {
   String method=req.substring(0,req.indexOf(' '));
   int a=req.indexOf(' '),b=req.indexOf(' ',a+1);
   String path=(a>=0&&b>a)?req.substring(a+1,b):"/";
+  if(path=="/ota"&&method=="POST"){
+    handleOta(c);
+    c.stop();
+    return;
+  }
+
   String body;
   if(method=="POST")body=readBody(c);
 
@@ -802,6 +872,8 @@ void handleHttp() {
   } else if(path=="/page"&&method=="POST"){
     String v=formValue(body,"p");if(v.length())page=(Page)constrain(v.toInt(),0,(int)PAGE_COUNT-1);
     lastRotate=millis();redirect(c);
+  } else if(path=="/ota"&&method=="GET"){
+    httpReply(c,"Use the MiniTV web console to upload firmware.bin.");
   } else if(path=="/factory"&&method=="POST"){
     factoryReset();redirect(c);
   } else {
