@@ -97,7 +97,8 @@ static int minitv_scanChannels() {
     if (minitv_findMediaInDir(dir, v, a)) ++minitv_channel_count;
   }
 
-  if (minitv_channel_count == 0 && !minitv_has_random) minitv_channel = 1;
+  if (minitv_has_random) minitv_channel = 0;
+  else if (minitv_channel_count == 0) minitv_channel = 1;
   else if (minitv_channel > minitv_channel_count) minitv_channel = 1;
 
   Serial.printf("[MiniTV] channels=%d random=%d\n", minitv_channel_count, minitv_has_random ? 1 : 0);
@@ -208,7 +209,7 @@ static void minitv_playback_task(void *) {
     String video, audio;
     bool found = false;
 
-    if (minitv_has_random) {
+    if (minitv_channel == 0 && minitv_has_random) {
       found = minitv_pickRandom(video, audio);
     } else if (minitv_channel_count > 0) {
       String dir = String(MINITV_MEDIA_ROOT) + "/" + String(minitv_channel);
@@ -230,7 +231,10 @@ static void minitv_playback_task(void *) {
       }
     }
 
-    if (!minitv_has_random && minitv_channel_count > 0) {
+    if (minitv_has_random) {
+      ++minitv_channel;
+      if (minitv_channel > minitv_channel_count) minitv_channel = 0;
+    } else if (minitv_channel_count > 0) {
       ++minitv_channel;
       if (minitv_channel > minitv_channel_count) minitv_channel = 1;
     }
@@ -265,8 +269,10 @@ static void minitvStopPlayback() {
 static bool minitvNextChannel(int direction) {
   if (minitv_channel_count <= 0) return false;
   minitv_channel += direction;
-  if (minitv_channel < 1) minitv_channel = minitv_channel_count;
-  if (minitv_channel > minitv_channel_count) minitv_channel = 1;
+  int minChannel = minitv_has_random ? 0 : 1;
+  int maxChannel = minitv_channel_count;
+  if (minitv_channel < minChannel) minitv_channel = maxChannel;
+  if (minitv_channel > maxChannel) minitv_channel = minChannel;
   minitv_stop_requested = true;
   minitv_autoplay = true;
   return true;
