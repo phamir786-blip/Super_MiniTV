@@ -40,7 +40,7 @@ static bool minitvIsJpeg(const String &n) {
   String s=n; s.toLowerCase(); return s.endsWith(".jpg") || s.endsWith(".jpeg");
 }
 static bool minitvSafePath(const String &p) {
-  return p.startsWith(MINITV_MEDIA_ROOT) && !p.startsWith(String(MINITV_MEDIA_ROOT)+"//"") &&
+  return p.startsWith(MINITV_MEDIA_ROOT) && !p.startsWith(String(MINITV_MEDIA_ROOT)+"//") &&
          p.indexOf("..")<0;
 }
 static void minitvEnsureDir(const String &path) {
@@ -258,12 +258,13 @@ static void minitvTick() {
   }
 }
 static String minitvStatusJson() {
-  String s="{\\"running\\":"+String(minitvRunning?"true":"false");
-  s+=",\\"channel\\":"+String(minitvChannel);
-  s+=",\\"channels\\":"+String(minitvChannelCount);
-  s+=",\\"random\\":"+String(minitvRandomMode?"true":"false");
-  s+=",\\"file\\":\\""+minitvCurrent+"\\"";
-  s+=",\\"frames\\":"+String(minitvFrameCount)+"}";
+  String q=String((char)34);
+  String s="{" + q + "running" + q + ":" + String(minitvRunning?"true":"false");
+  s+="," + q + "channel" + q + ":" + String(minitvChannel);
+  s+="," + q + "channels" + q + ":" + String(minitvChannelCount);
+  s+="," + q + "random" + q + ":" + String(minitvRandomMode?"true":"false");
+  s+="," + q + "file" + q + ":" + q + minitvCurrent + q;
+  s+="," + q + "frames" + q + ":" + String(minitvFrameCount) + "}";
   return s;
 }
 static String minitvMediaList() {
