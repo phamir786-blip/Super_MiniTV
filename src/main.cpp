@@ -111,7 +111,7 @@ void reply(WiFiClient&c,const String&b,int code=200,const char*t="text/html"){co
 void redirect(WiFiClient&c){c.print("HTTP/1.1 303 See Other\r\nLocation: /\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");}
 void headers(WiFiClient&c){String line;while(c.connected()){line=c.readStringUntil('\n');if(line=="\r"||line.length()==0)break;String l=line;l.toLowerCase();if(l.startsWith("content-length:"))contentLength=(size_t)l.substring(15).toInt();}}
 String request(WiFiClient&c){String r=c.readStringUntil('\n');r.trim();lastRequest=r;contentLength=0;headers(c);return r;}
-void handleUpload(WiFiClient&c,const String&path){
+String readBody(WiFiClient&c){String b;size_t left=contentLength;uint32_t until=millis()+5000;while(left&&c.connected()&&millis()<until){while(c.available()&&left){char ch=(char)c.read();b+=ch;--left;}if(left)delay(1);}return b;}\nvoid handleUpload(WiFiClient&c,const String&path){
   if(!minitvSafePath(path)||!minitvIsImage(path)||contentLength==0||contentLength>MINITV_MAX_UPLOAD){reply(c,"Invalid media path or size",400,"text/plain");return;}
   minitvEnsureDir(path);File f=LittleFS.open(path,FILE_WRITE);if(!f){reply(c,"Open failed",500,"text/plain");return;}
   uint8_t buf[1024];size_t left=contentLength;uint32_t until=millis()+30000;
@@ -131,11 +131,11 @@ void http(){
   String req=request(c);int a=req.indexOf(' '),b=req.indexOf(' ',a+1);String path=(a>=0&&b>a)?req.substring(a+1,b):"/";String route=path;int q=route.indexOf('?');if(q>=0)route=route.substring(0,q);
   if(route=="/upload"&&req.startsWith("POST")){handleUpload(c,queryValue(path,"path"));c.stop();return;}
   if(route=="/ota"&&req.startsWith("POST")){handleOta(c);c.stop();return;}
-  if(route=="/delete"&&req.startsWith("POST")){String p=queryValue(path,"path");reply(c,minitvDelete(p)?"DELETE OK":"DELETE FAILED",minitvDelete(p)?200:400,"text/plain");c.stop();return;}
+  if(route=="/delete"&&req.startsWith("POST")){String p=queryValue(path,"path");bool ok=minitvDelete(p);reply(c,ok?"DELETE OK":"DELETE FAILED",ok?200:400,"text/plain");c.stop();return;}
   if(req.startsWith("GET /media?")){String cmd=queryValue(path,"cmd");if(cmd=="start")minitvStartPlayback();else if(cmd=="stop")minitvStopPlayback();else if(cmd=="next")minitvNextChannel(1);else if(cmd=="random"){minitvRandomMode=!minitvRandomMode;minitvStopPlayback();minitvStartPlayback();}reply(c,minitvStatusJson(),200,"application/json");c.stop();return;}
   if(route=="/"&&req.startsWith("GET"))reply(c,html());
   else if(route=="/screen"&&req.startsWith("POST")){String body=c.readStringUntil('\r');(void)body;screen=(uint8_t)constrain(queryValue(path,"s").toInt(),0,2);saveSettings();redirect(c);}
-  else if(route=="/settings"&&req.startsWith("POST")){String body="";uint32_t until=millis()+1000;while(c.available()&&millis()<until)body+=(char)c.read();int p=body.indexOf("place=");if(p>=0){p+=6;int e=body.indexOf('&',p);weatherPlace=dec(e<0?body.substring(p):body.substring(p,e));saveSettings();}redirect(c);}
+  else if(route=="/settings"&&req.startsWith("POST")){String body=readBody(c);int p=body.indexOf("place=");if(p>=0){p+=6;int e=body.indexOf('&',p);weatherPlace=dec(e<0?body.substring(p):body.substring(p,e));saveSettings();}redirect(c);}
   else reply(c,"Not found",404,"text/plain");
   c.stop();
 }
