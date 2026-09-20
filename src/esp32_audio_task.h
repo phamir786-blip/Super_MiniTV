@@ -88,11 +88,11 @@ static void minitv_write_pcm(int16_t *pcm, size_t samples, int sampleRate, int c
   i2s_write(minitv_i2s_num, pcm, samples * sizeof(int16_t), &written, portMAX_DELAY);
 }
 
-static void minitv_aac_callback(AACFrameInfo &info, int16_t *pcm, size_t len) {
+static void minitv_aac_callback(AACFrameInfo &info, int16_t *pcm, size_t len, void *) {
   minitv_write_pcm(pcm, len, info.sampRateOut, info.nChans);
 }
 
-static void minitv_mp3_callback(MP3FrameInfo &info, int16_t *pcm, size_t len) {
+static void minitv_mp3_callback(MP3FrameInfo &info, int16_t *pcm, size_t len, void *) {
   minitv_write_pcm(pcm, len, info.samprate, info.nChans);
 }
 
