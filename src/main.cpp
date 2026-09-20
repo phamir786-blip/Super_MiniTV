@@ -109,6 +109,14 @@ volatile bool mediaPlaying = false;
 // =========================
 // Low-level ST7789
 // =========================
+static uint16_t color565(uint32_t c) {
+  if (c <= 0xFFFF) return static_cast<uint16_t>(c);
+  uint8_t r = (c >> 16) & 0xFF;
+  uint8_t g = (c >> 8) & 0xFF;
+  uint8_t b = c & 0xFF;
+  return static_cast<uint16_t>(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
+}
+
 void lcdCommand(uint8_t cmd) {
   SPI.beginTransaction(lcdSettings);
   digitalWrite(TFT_DC, LOW);
@@ -165,7 +173,7 @@ void lcdInit() {
   delay(100);
 }
 
-void fillScreen(uint16_t color) {
+void fillScreen(uint32_t rawColor) {\n  uint16_t color = color565(rawColor);
   lcdSetWindow(0,0,W-1,H-1);
   uint8_t hi = color >> 8, lo = color;
   uint8_t buf[64];
@@ -181,14 +189,14 @@ void fillScreen(uint16_t color) {
   SPI.endTransaction();
 }
 
-void drawPixel(int16_t x, int16_t y, uint16_t color) {
+void drawPixel(int16_t x, int16_t y, uint32_t rawColor) {\n  uint16_t color = color565(rawColor);
   if (x<0||y<0||x>=W||y>=H) return;
   lcdSetWindow(x,y,x,y);
   uint8_t d[2] = { uint8_t(color>>8), uint8_t(color) };
   lcdData(d,2);
 }
 
-void drawFastH(int16_t x,int16_t y,int16_t len,uint16_t c) {
+void drawFastH(int16_t x,int16_t y,int16_t len,uint32_t rawColor) {\n  uint16_t c = color565(rawColor);
   if (y<0||y>=H||len<=0) return;
   if (x<0) { len+=x; x=0; }
   if (x+len>W) len=W-x;
@@ -202,7 +210,7 @@ void drawFastH(int16_t x,int16_t y,int16_t len,uint16_t c) {
   SPI.endTransaction();
 }
 
-void drawFastV(int16_t x,int16_t y,int16_t len,uint16_t c) {
+void drawFastV(int16_t x,int16_t y,int16_t len,uint32_t rawColor) {\n  uint16_t c = color565(rawColor);
   if (x<0||x>=W||len<=0) return;
   if (y<0) {len+=y;y=0;} if(y+len>H)len=H-y; if(len<=0)return;
   lcdSetWindow(x,y,x,y+len-1);
@@ -213,11 +221,11 @@ void drawFastV(int16_t x,int16_t y,int16_t len,uint16_t c) {
   SPI.endTransaction();
 }
 
-void rect(int16_t x,int16_t y,int16_t w,int16_t h,uint16_t c) {
+void rect(int16_t x,int16_t y,int16_t w,int16_t h,uint32_t c) {
   drawFastH(x,y,w,c);drawFastH(x,y+h-1,w,c);
   drawFastV(x,y,h,c);drawFastV(x+w-1,y,h,c);
 }
-void fillRect(int16_t x,int16_t y,int16_t w,int16_t h,uint16_t c) {
+void fillRect(int16_t x,int16_t y,int16_t w,int16_t h,uint32_t rawColor) {\n  uint16_t c = color565(rawColor);
   if(w<=0||h<=0)return;
   if(x<0){w+=x;x=0;}if(y<0){h+=y;y=0;}
   if(x+w>W)w=W-x;if(y+h>H)h=H-y;if(w<=0||h<=0)return;
