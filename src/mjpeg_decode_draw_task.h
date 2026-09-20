@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <FS.h>
 #include <JPEGDEC.h>
+#include "esp_heap_caps.h"
 #include "config.h"
 
 typedef struct {
