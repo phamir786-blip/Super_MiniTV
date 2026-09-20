@@ -780,6 +780,8 @@ String readBody(WiFiClient& c) {
   return body;
 }
 
+void httpReply(WiFiClient& c,const String& body,int code=200,const char* type="text/html");
+
 void handleOta(WiFiClient& c) {
   if(requestContentLength==0 || requestContentLength > 1900000UL){
     httpReply(c,"Invalid firmware size",400,"text/plain");
@@ -841,7 +843,7 @@ String formValue(const String& body,const String& key) {
   return out;
 }
 
-void httpReply(WiFiClient& c,const String& body,int code=200,const char* type="text/html") {
+void httpReply(WiFiClient& c,const String& body,int code,const char* type) {
   String status=code==200?"200 OK":(code==303?"303 See Other":"400 Bad Request");
   c.printf("HTTP/1.1 %s\r\nContent-Type: %s; charset=utf-8\r\nCache-Control: no-store\r\nConnection: close\r\nContent-Length: %u\r\n\r\n",
            status.c_str(),type,(unsigned)body.length());
