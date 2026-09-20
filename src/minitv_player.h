@@ -246,7 +246,11 @@ static void minitv_playback_task(void *) {
 
 static bool minitvStartPlayback() {
   if (!minitv_engine_ready) return false;
-  if (minitv_playback_task_running) return true;
+  if (minitv_playback_task_running) {
+    minitv_stop_requested = false;
+    minitv_autoplay = true;
+    return true;
+  }
   minitv_stop_requested = false;
   minitv_autoplay = true;
   return xTaskCreate(minitv_playback_task, "MiniTV Player", 6144, nullptr, 3,
