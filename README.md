@@ -2,7 +2,7 @@
 
 ESP32-C3-DevKitM-1 + GMT130-V1.0 240x240 ST7789.
 
-This repository keeps the proven MiniTV Ultra display/network foundation and adds the real media engine architecture from the selected DynaMight1124 MiniTV Player: MJPEG frame decoding, AAC/MP3 playback, dynamic numbered channels, random playback, persistent Ultra UI settings, weather, mDNS, native HTTP, and OTA.
+This repository keeps the proven MiniTV Ultra display/network foundation and adds the real media engine architecture from the selected DynaMight1124 MiniTV Player: MJPEG/video-frame playback, dynamic numbered channels, random playback, image screens, persistent Ultra UI settings, weather, mDNS, native HTTP, and OTA.
 
 ## Hardware kept unchanged
 
@@ -26,18 +26,14 @@ Put media in:
 /Videos/
   1/
     show.mjpeg
-    show.mp3
   2/
     another.mjpeg
-    another.aac
   random/
     clip01.mjpeg
-    clip01.mp3
     clip02.mjpeg
-    clip02.aac
 ```
 
-Numbered channels play sequentially. The random folder continuously selects MJPEG clips at random. Matching audio is preferred; numbered channels can fall back to another AAC/MP3 in the same directory.
+Numbered channels play sequentially. The random folder continuously selects MJPEG clips at random. Video-only playback is used; no audio decoder, I2S audio task, or audio dependency is included.
 
 ## Recommended encoding
 
@@ -56,16 +52,6 @@ ffmpeg -i input.mp4 -ar 44100 -ac 1 -b:a 32k output.mp3
 ```
 
 AAC is also supported.
-
-## I2S audio
-
-Audio is enabled in `src/config.h` and uses:
-
-- BCLK GPIO7
-- LRCK GPIO0
-- DIN GPIO1
-
-These are configuration defaults for an external I2S DAC. The ESP32-C3 has no built-in DAC, so an external I2S DAC/amplifier is required for audio output.
 
 ## Build
 
